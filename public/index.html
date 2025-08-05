@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pune Mess Menu - Find Your Daily Meals</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-utensils"></i>
+                <h1>Pune Mess Menu</h1>
+            </div>
+            <nav class="nav">
+                <button class="nav-btn active" data-tab="student">Student View</button>
+                <button class="nav-btn" data-tab="mess">Mess Owner</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Student View -->
+            <section id="student-view" class="view-section active">
+                <div class="hero-section">
+                    <h2>Find Your Perfect Mess Menu</h2>
+                    <p>Discover daily menus from messes near you in Pune</p>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="search-section">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="search-input" placeholder="Search by mess name or location...">
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="veg">Veg Only</button>
+                        <button class="filter-btn" data-filter="non-veg">Non-Veg</button>
+                        <button class="filter-btn" data-filter="budget">Budget Friendly</button>
+                    </div>
+                </div>
+
+                <!-- Mess List -->
+                <div class="mess-grid" id="mess-grid">
+                    <!-- Mess cards will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Mess Owner View -->
+            <section id="mess-view" class="view-section">
+                <div class="hero-section">
+                    <h2>Upload Your Daily Menu</h2>
+                    <p>Share your delicious meals with students in Pune</p>
+                </div>
+
+                <!-- Upload Form -->
+                <div class="upload-section">
+                    <div class="upload-card">
+                        <h3>Add New Menu</h3>
+                        <div class="upload-time-info">
+                            <i class="fas fa-clock"></i>
+                            <strong>Note:</strong> Menus will be automatically deleted after 5 hours
+                        </div>
+                        <form id="menu-form">
+                            <div class="form-group">
+                                <label for="mess-name">Mess Name</label>
+                                <input type="text" id="mess-name" required placeholder="Enter your mess name">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="mess-location">Location</label>
+                                <input type="text" id="mess-location" required placeholder="Enter your location in Pune">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="mess-phone">Contact Number</label>
+                                <input type="tel" id="mess-phone" required placeholder="Enter contact number">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="menu-type">Menu Type (Optional)</label>
+                                <select id="menu-type">
+                                    <option value="">Select menu type (optional)</option>
+                                    <option value="veg">Veg Only</option>
+                                    <option value="non-veg">Non-Veg Available</option>
+                                    <option value="budget">Budget Friendly</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="menu-text">Menu Details</label>
+                                <textarea id="menu-text" rows="4" required placeholder="Enter today's menu details (e.g., Roti, Dal, Rice, Sabzi)"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="menu-image">Upload Menu Image (Optional)</label>
+                                <div class="file-upload">
+                                    <input type="file" id="menu-image" accept="image/*">
+                                    <div class="upload-placeholder">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span>Click to upload image</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="price">Price Range (Optional)</label>
+                                <select id="price">
+                                    <option value="">Select price range (optional)</option>
+                                    <option value="budget">₹30-50 per meal</option>
+                                    <option value="medium">₹50-80 per meal</option>
+                                    <option value="premium">₹80+ per meal</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="submit-btn">
+                                <i class="fas fa-upload"></i>
+                                Upload Menu
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Pune Mess Menu. Made for students and mess owners in Pune.</p>
+        </div>
+    </footer>
+
+    <!-- Modal for Menu Details -->
+    <div id="menu-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modal-content">
+                <!-- Modal content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
