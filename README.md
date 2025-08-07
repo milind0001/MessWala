@@ -1,170 +1,200 @@
 # Pune Mess Menu App
 
-A web application for Pune bachelors to easily find daily mess menus. The app has two main interfaces: one for mess owners to upload menus (text or image) and another for students to view them.
+A real-time mess menu sharing application for students and mess owners in Pune. Built with Node.js, MongoDB, Cloudinary for image storage, and Socket.IO for real-time updates.
 
 ## Features
 
-### For Students:
-- **Browse Mess Menus**: View all uploaded mess menus with details
-- **Search & Filter**: Search by mess name, location, or menu items
-- **Filter Options**: Filter by menu type (Veg, Non-Veg, Budget)
-- **Contact Mess Owners**: Direct call and WhatsApp integration
-- **Mobile-Friendly**: Responsive design for all devices
+- **Real-time Menu Sharing**: Mess owners can upload menus that appear instantly for all students
+- **Cloud Image Storage**: Images are stored securely on Cloudinary and accessible globally
+- **Auto-expiration**: Menus automatically expire after 5 hours
+- **Real-time Updates**: Students see new menus and deletions in real-time
+- **Search & Filter**: Students can search and filter menus by type
+- **Contact Integration**: Direct call and WhatsApp integration
+- **Responsive Design**: Works on desktop and mobile devices
 
-### For Mess Owners:
-- **Upload Menus**: Add text descriptions and images
-- **Optional Fields**: Menu type and price range (optional)
-- **Auto-Expiration**: Menus automatically delete after 5 hours
-- **Easy Interface**: Simple form with drag-and-drop image upload
+## Prerequisites
 
-## Technical Stack
-
-### Backend:
-- **Node.js** - Server runtime
-- **Express.js** - Web framework
-- **MongoDB** - Database for storing mess data
-- **Mongoose** - MongoDB object modeling
-- **Multer** - File upload handling
-- **CORS** - Cross-origin resource sharing
-
-### Frontend:
-- **HTML5** - Structure
-- **CSS3** - Styling with responsive design
-- **Vanilla JavaScript** - Client-side functionality
-- **Font Awesome** - Icons
-- **Google Fonts** - Typography (Poppins)
+- Node.js (v14 or higher)
+- MongoDB (local or cloud)
+- Cloudinary account
 
 ## Setup Instructions
 
-### Prerequisites:
-- Node.js (v14 or higher)
-- MongoDB (local or cloud)
+### 1. Clone the Repository
+```bash
+git clone <repository-url>
+cd Messy
+```
 
-### Installation:
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd pune-mess-app
-   ```
+### 3. Environment Configuration
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+Create a `.env` file in the root directory:
+```bash
+cp env.example .env
+```
 
-3. **Set up environment variables:**
-   Create a `.env` file in the root directory:
-   ```
-   MONGODB_URI=mongodb://localhost:27017/pune-mess-app
-   PORT=5000
-   ```
+Edit the `.env` file with your configuration:
+```env
+MONGODB_URI=mongodb://localhost:27017/pune-mess-app
+PORT=5000
 
-4. **Create uploads directory:**
-   ```bash
-   mkdir uploads
-   ```
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
 
-5. **Start the server:**
-   ```bash
-   npm start
-   ```
+### 4. Cloudinary Setup
 
-   For development with auto-restart:
-   ```bash
-   npm run dev
-   ```
+1. Sign up for a free account at [Cloudinary](https://cloudinary.com/)
+2. Get your credentials from the dashboard:
+   - Cloud Name
+   - API Key
+   - API Secret
+3. Update the `.env` file with your Cloudinary credentials
 
-6. **Access the application:**
-   Open your browser and go to `http://localhost:5000`
+### 5. MongoDB Setup
 
-## MongoDB Setup
-
-### Local MongoDB:
+#### Option A: Local MongoDB
 1. Install MongoDB on your system
 2. Start MongoDB service
 3. The app will automatically create the database
 
-### MongoDB Atlas (Cloud):
-1. Create a MongoDB Atlas account
-2. Create a new cluster
+#### Option B: MongoDB Atlas (Cloud)
+1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/atlas)
+2. Create a cluster
 3. Get your connection string
-4. Update the `MONGODB_URI` in your `.env` file
+4. Update `MONGODB_URI` in `.env`
+
+### 6. Run the Application
+
+#### Development Mode
+```bash
+npm run dev
+```
+
+#### Production Mode
+```bash
+npm start
+```
+
+The application will be available at `http://localhost:5000`
+
+## Usage
+
+### For Mess Owners
+1. Click on "Mess Owner" tab
+2. Fill in the form with:
+   - Mess name
+   - Location
+   - Contact number
+   - Menu details
+   - Optional: Upload menu image
+   - Optional: Select menu type and price range
+3. Click "Upload Menu"
+4. Menu will be visible to all students immediately
+
+### For Students
+1. Click on "Student View" tab
+2. Browse available menus
+3. Use search to find specific messes
+4. Filter by menu type (Veg, Non-Veg, Budget)
+5. Click "View Details" to see full menu
+6. Use "Call Now" or "WhatsApp" to contact mess owners
 
 ## API Endpoints
 
-### GET `/api/messes`
-- Returns all mess data sorted by upload time
+- `GET /api/messes` - Get all active menus
+- `POST /api/messes` - Upload new menu
+- `DELETE /api/messes/expired` - Delete expired menus
+- `DELETE /api/messes/:id` - Delete specific menu
 
-### POST `/api/messes`
-- Upload new mess data with optional image
-- Accepts multipart/form-data
+## Real-time Events
 
-### DELETE `/api/messes/expired`
-- Manually trigger deletion of expired menus (older than 5 hours)
+- `newMenuAdded` - Emitted when a new menu is uploaded
+- `menuDeleted` - Emitted when a menu is deleted
+- `menusExpired` - Emitted when expired menus are cleaned up
 
 ## File Structure
 
 ```
-pune-mess-app/
+Messy/
 ├── public/
-│   ├── index.html
-│   ├── styles.css
-│   └── script.js
-├── uploads/          # Image uploads directory
-├── server.js         # Main server file
-├── package.json
-├── .env              # Environment variables
-└── README.md
+│   ├── index.html      # Main application page
+│   ├── script.js       # Frontend JavaScript
+│   └── styles.css      # Application styles
+├── server.js           # Backend server
+├── package.json        # Dependencies
+├── env.example         # Environment variables template
+└── README.md          # This file
 ```
+
+## Technologies Used
+
+- **Backend**: Node.js, Express.js, MongoDB, Mongoose
+- **Real-time**: Socket.IO
+- **Image Storage**: Cloudinary
+- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
+- **Styling**: Custom CSS with responsive design
+
+## Features in Detail
+
+### Real-time Updates
+- New menus appear instantly for all connected users
+- Deleted menus are removed in real-time
+- Expired menus are automatically cleaned up
+
+### Image Management
+- Images are optimized and stored on Cloudinary
+- Automatic image transformation (resize, quality optimization)
+- Secure cloud storage with global CDN
+
+### Auto-expiration System
+- Menus automatically expire after 5 hours
+- Expired menus are removed from the database
+- Associated images are deleted from Cloudinary
+- Real-time notifications when menus expire
+
+### Search and Filter
+- Search by mess name, location, or menu text
+- Filter by menu type (Veg, Non-Veg, Budget)
+- Real-time search results
+
+### Contact Integration
+- Direct phone call integration
+- WhatsApp messaging with pre-filled message
+- Contact information displayed prominently
 
 ## Deployment
 
-### Vercel Deployment:
-1. Install Vercel CLI: `npm i -g vercel`
-2. Deploy: `vercel`
+### Heroku Deployment
+1. Create a Heroku account
+2. Install Heroku CLI
+3. Create a new Heroku app
+4. Add MongoDB Atlas addon
+5. Set environment variables in Heroku dashboard
+6. Deploy using Git
+
+### Vercel Deployment
+1. Create a Vercel account
+2. Connect your GitHub repository
 3. Set environment variables in Vercel dashboard
-4. Configure MongoDB Atlas connection
+4. Deploy automatically
 
-### Other Platforms:
-- **Heroku**: Add MongoDB addon
-- **Railway**: Connect MongoDB database
-- **Render**: Set up MongoDB service
+## Environment Variables
 
-## Features
-
-### Data Persistence:
-- **MongoDB Storage**: All data stored in MongoDB
-- **Image Uploads**: Images stored on server filesystem
-- **Auto-Cleanup**: Expired menus automatically removed
-
-### Security:
-- **File Validation**: Only image files accepted
-- **Size Limits**: 5MB maximum file size
-- **CORS Enabled**: Cross-origin requests allowed
-
-### Performance:
-- **Optimized Images**: Automatic file naming and organization
-- **Efficient Queries**: MongoDB indexing for fast retrieval
-- **Background Cleanup**: Automatic expired data removal
-
-## Browser Compatibility
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-- Mobile browsers (iOS Safari, Chrome Mobile)
-
-## Future Enhancements
-
-- User authentication for mess owners
-- Real-time notifications
-- Advanced search filters
-- Menu scheduling
-- Rating and review system
-- Payment integration
-- Push notifications
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `MONGODB_URI` | MongoDB connection string | Yes |
+| `PORT` | Server port (default: 5000) | No |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | Yes |
+| `CLOUDINARY_API_KEY` | Cloudinary API key | Yes |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret | Yes |
 
 ## Contributing
 
@@ -176,4 +206,19 @@ pune-mess-app/
 
 ## License
 
-MIT License - see LICENSE file for details 
+MIT License - see LICENSE file for details
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Contact the development team
+
+## Changelog
+
+### v1.0.0
+- Initial release with Cloudinary integration
+- Real-time menu sharing
+- Auto-expiration system
+- Search and filter functionality
+- Responsive design 

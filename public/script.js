@@ -4,6 +4,9 @@ let messData = [];
 // API base URL
 const API_BASE_URL = window.location.origin;
 
+// Socket.IO connection
+const socket = io();
+
 // Load data from API
 async function loadMessData() {
     try {
@@ -30,6 +33,41 @@ const menuForm = document.getElementById('menu-form');
 const modal = document.getElementById('menu-modal');
 const modalContent = document.getElementById('modal-content');
 const closeModal = document.querySelector('.close');
+
+// Socket.IO Event Listeners
+socket.on('connect', () => {
+    console.log('Connected to server');
+});
+
+socket.on('newMenuAdded', (newMess) => {
+    // Add new menu to the beginning of the array
+    messData.unshift(newMess);
+    
+    // Update display if we're on student view
+    if (document.querySelector('[data-tab="student"]').classList.contains('active')) {
+        displayMessCards(messData);
+        showMessage('New menu added!', 'success');
+    }
+});
+
+socket.on('menuDeleted', (data) => {
+    // Remove the deleted menu from the array
+    messData = messData.filter(mess => mess._id !== data.id);
+    
+    // Update display
+    displayMessCards(messData);
+    showMessage('Menu deleted', 'info');
+});
+
+socket.on('menusExpired', (data) => {
+    if (data.deletedCount > 0) {
+        // Reload data to get updated list
+        loadMessData().then(() => {
+            displayMessCards(messData);
+            showMessage(`${data.deletedCount} expired menu(s) removed`, 'info');
+        });
+    }
+});
 
 // Tab Switching
 navBtns.forEach(btn => {
@@ -120,6 +158,12 @@ function createMessCard(mess) {
         ${mess.price}
     </div>` : '';
     
+    const timeRemaining = getTimeRemaining(mess.expiresAt);
+    const timeRemainingHtml = `<div class="time-remaining ${timeRemaining.urgent ? 'urgent' : ''}">
+        <i class="fas fa-clock"></i>
+        ${timeRemaining.text}
+    </div>`;
+    
     card.innerHTML = `
         <h3>${mess.name}</h3>
         <div class="location">
@@ -131,12 +175,32 @@ function createMessCard(mess) {
         </div>
         ${menuTypeHtml}
         ${priceHtml}
-        <button class="view-details-btn" onclick="showMenuDetails(${mess.id})">
+        ${timeRemainingHtml}
+        <button class="view-details-btn" onclick="showMenuDetails('${mess._id}')">
             <i class="fas fa-eye"></i>
             View Details
         </button>
     `;
     return card;
+}
+
+// Get Time Remaining
+function getTimeRemaining(expiresAt) {
+    const now = Date.now();
+    const timeLeft = expiresAt - now;
+    
+    if (timeLeft <= 0) {
+        return { text: 'Expired', urgent: true };
+    }
+    
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) {
+        return { text: `${hours}h ${minutes}m left`, urgent: hours < 1 };
+    } else {
+        return { text: `${minutes}m left`, urgent: true };
+    }
 }
 
 // Get Menu Type Label
@@ -151,11 +215,12 @@ function getMenuTypeLabel(type) {
 
 // Show Menu Details Modal
 function showMenuDetails(messId) {
-    const mess = messData.find(m => m.id === messId);
+    const mess = messData.find(m => m._id === messId);
     if (!mess) return;
     
     const priceInfo = mess.price ? `<p><i class="fas fa-tag"></i> <strong>Price:</strong> ${mess.price}</p>` : '';
     const menuTypeInfo = mess.menuType ? `<p><i class="fas fa-utensils"></i> <strong>Menu Type:</strong> ${getMenuTypeLabel(mess.menuType)}</p>` : '';
+    const timeRemaining = getTimeRemaining(mess.expiresAt);
     
     modalContent.innerHTML = `
         <h2>${mess.name}</h2>
@@ -163,6 +228,7 @@ function showMenuDetails(messId) {
             <p><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> ${mess.location}</p>
             <p><i class="fas fa-phone"></i> <strong>Contact:</strong> ${mess.phone}</p>
             <p><i class="fas fa-calendar"></i> <strong>Date:</strong> ${mess.date}</p>
+            <p><i class="fas fa-clock"></i> <strong>Time Left:</strong> <span class="${timeRemaining.urgent ? 'urgent' : ''}">${timeRemaining.text}</span></p>
             ${priceInfo}
             ${menuTypeInfo}
         </div>
@@ -172,8 +238,8 @@ function showMenuDetails(messId) {
                 ${mess.menuText}
             </div>
         </div>
-        ${mess.image ? `
-            <img src="${mess.image}" alt="Menu Image" class="menu-image">
+        ${mess.image && mess.image.url ? `
+            <img src="${mess.image.url}" alt="Menu Image" class="menu-image">
             <div class="contact-actions">
                 <button class="call-btn" onclick="callMess('${mess.phone}')">
                     <i class="fas fa-phone"></i>
@@ -228,6 +294,11 @@ function whatsappMess(phone, messName) {
 menuForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const submitBtn = menuForm.querySelector('.submit-btn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    submitBtn.disabled = true;
+    
     const formData = new FormData();
     formData.append('name', document.getElementById('mess-name').value);
     formData.append('location', document.getElementById('mess-location').value);
@@ -251,7 +322,6 @@ menuForm.addEventListener('submit', async (e) => {
         
         if (response.ok) {
             const newMess = await response.json();
-            messData.unshift(newMess);
             
             // Show success message
             showMessage('Menu uploaded successfully!', 'success');
@@ -269,6 +339,9 @@ menuForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error('Error uploading menu:', error);
         showMessage('Error uploading menu. Please try again.', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 });
 
@@ -281,12 +354,6 @@ function getPriceText(priceValue) {
         'premium': '₹80+ per meal'
     };
     return prices[priceValue] || priceValue;
-}
-
-// Add Mess to List (kept for backward compatibility)
-function addMessToList(newMess) {
-    messData.unshift(newMess);
-    displayMessCards(messData);
 }
 
 // Show Message
@@ -325,27 +392,6 @@ document.getElementById('menu-image').addEventListener('change', function(e) {
     }
 });
 
-// Auto-delete function (now handled by backend)
-async function checkAndDeleteExpiredMenus() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/messes/expired`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            if (result.deletedCount > 0) {
-                console.log(`Deleted ${result.deletedCount} expired menus`);
-                // Reload data from server
-                await loadMessData();
-                displayMessCards(messData);
-            }
-        }
-    } catch (error) {
-        console.error('Error checking expired menus:', error);
-    }
-}
-
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
     // Load data from API
@@ -353,9 +399,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Load initial data
     displayMessCards(messData);
-    
-    // Check for expired menus every minute
-    setInterval(checkAndDeleteExpiredMenus, 60000);
     
     // Add some CSS for additional elements
     const style = document.createElement('style');
@@ -430,6 +473,48 @@ document.addEventListener('DOMContentLoaded', async () => {
             margin-top: 1rem;
         }
         
+        .time-remaining {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .time-remaining.urgent {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .message {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
         @media (max-width: 768px) {
             .contact-actions {
                 flex-direction: column;
@@ -484,15 +569,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             text-align: center;
         }
         
-        .time-remaining {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-bottom: 1rem;
-            background: #e3f2fd;
-            color: #1976d2;
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
     `;
     document.head.appendChild(style);
