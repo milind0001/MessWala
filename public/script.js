@@ -1,11 +1,8 @@
 // Mess data array - will be populated by user uploads and stored in MongoDB
 let messData = [];
 
-// API base URL
+// API base URL - will work on both local and Vercel
 const API_BASE_URL = window.location.origin;
-
-// Socket.IO connection
-const socket = io();
 
 // Load data from API
 async function loadMessData() {
@@ -33,41 +30,6 @@ const menuForm = document.getElementById('menu-form');
 const modal = document.getElementById('menu-modal');
 const modalContent = document.getElementById('modal-content');
 const closeModal = document.querySelector('.close');
-
-// Socket.IO Event Listeners
-socket.on('connect', () => {
-    console.log('Connected to server');
-});
-
-socket.on('newMenuAdded', (newMess) => {
-    // Add new menu to the beginning of the array
-    messData.unshift(newMess);
-    
-    // Update display if we're on student view
-    if (document.querySelector('[data-tab="student"]').classList.contains('active')) {
-        displayMessCards(messData);
-        showMessage('New menu added!', 'success');
-    }
-});
-
-socket.on('menuDeleted', (data) => {
-    // Remove the deleted menu from the array
-    messData = messData.filter(mess => mess._id !== data.id);
-    
-    // Update display
-    displayMessCards(messData);
-    showMessage('Menu deleted', 'info');
-});
-
-socket.on('menusExpired', (data) => {
-    if (data.deletedCount > 0) {
-        // Reload data to get updated list
-        loadMessData().then(() => {
-            displayMessCards(messData);
-            showMessage(`${data.deletedCount} expired menu(s) removed`, 'info');
-        });
-    }
-});
 
 // Tab Switching
 navBtns.forEach(btn => {
@@ -158,10 +120,9 @@ function createMessCard(mess) {
         ${mess.price}
     </div>` : '';
     
-    const timeRemaining = getTimeRemaining(mess.expiresAt);
-    const timeRemainingHtml = `<div class="time-remaining ${timeRemaining.urgent ? 'urgent' : ''}">
+    const timeRemainingHtml = `<div class="time-remaining ${mess.timeRemaining?.urgent ? 'urgent' : ''}">
         <i class="fas fa-clock"></i>
-        ${timeRemaining.text}
+        ${mess.timeRemaining?.text || 'Loading...'}
     </div>`;
     
     card.innerHTML = `
@@ -184,25 +145,6 @@ function createMessCard(mess) {
     return card;
 }
 
-// Get Time Remaining
-function getTimeRemaining(expiresAt) {
-    const now = Date.now();
-    const timeLeft = expiresAt - now;
-    
-    if (timeLeft <= 0) {
-        return { text: 'Expired', urgent: true };
-    }
-    
-    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (hours > 0) {
-        return { text: `${hours}h ${minutes}m left`, urgent: hours < 1 };
-    } else {
-        return { text: `${minutes}m left`, urgent: true };
-    }
-}
-
 // Get Menu Type Label
 function getMenuTypeLabel(type) {
     const labels = {
@@ -220,7 +162,6 @@ function showMenuDetails(messId) {
     
     const priceInfo = mess.price ? `<p><i class="fas fa-tag"></i> <strong>Price:</strong> ${mess.price}</p>` : '';
     const menuTypeInfo = mess.menuType ? `<p><i class="fas fa-utensils"></i> <strong>Menu Type:</strong> ${getMenuTypeLabel(mess.menuType)}</p>` : '';
-    const timeRemaining = getTimeRemaining(mess.expiresAt);
     
     modalContent.innerHTML = `
         <h2>${mess.name}</h2>
@@ -228,7 +169,7 @@ function showMenuDetails(messId) {
             <p><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> ${mess.location}</p>
             <p><i class="fas fa-phone"></i> <strong>Contact:</strong> ${mess.phone}</p>
             <p><i class="fas fa-calendar"></i> <strong>Date:</strong> ${mess.date}</p>
-            <p><i class="fas fa-clock"></i> <strong>Time Left:</strong> <span class="${timeRemaining.urgent ? 'urgent' : ''}">${timeRemaining.text}</span></p>
+            <p><i class="fas fa-clock"></i> <strong>Time Left:</strong> <span class="${mess.timeRemaining?.urgent ? 'urgent' : ''}">${mess.timeRemaining?.text || 'Loading...'}</span></p>
             ${priceInfo}
             ${menuTypeInfo}
         </div>
@@ -290,6 +231,36 @@ function whatsappMess(phone, messName) {
     window.open(whatsappUrl, '_blank');
 }
 
+// Upload image to Cloudinary
+async function uploadImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        imageData: e.target.result
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    resolve(result);
+                } else {
+                    reject(new Error('Upload failed'));
+                }
+            } catch (error) {
+                reject(error);
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 // Form Submission
 menuForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -299,29 +270,43 @@ menuForm.addEventListener('submit', async (e) => {
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
     submitBtn.disabled = true;
     
-    const formData = new FormData();
-    formData.append('name', document.getElementById('mess-name').value);
-    formData.append('location', document.getElementById('mess-location').value);
-    formData.append('phone', document.getElementById('mess-phone').value);
-    formData.append('menuType', document.getElementById('menu-type').value || '');
-    formData.append('menuText', document.getElementById('menu-text').value);
-    formData.append('price', getPriceText(document.getElementById('price').value) || '');
-    formData.append('date', new Date().toISOString().split('T')[0]);
-    
-    // Handle image upload
-    const imageFile = document.getElementById('menu-image').files[0];
-    if (imageFile) {
-        formData.append('image', imageFile);
-    }
-    
     try {
+        // Handle image upload first
+        let imageData = null;
+        const imageFile = document.getElementById('menu-image').files[0];
+        if (imageFile) {
+            try {
+                imageData = await uploadImage(imageFile);
+            } catch (uploadError) {
+                console.error('Image upload failed:', uploadError);
+                showMessage('Image upload failed. Menu will be uploaded without image.', 'warning');
+            }
+        }
+        
+        // Prepare form data
+        const formData = {
+            name: document.getElementById('mess-name').value,
+            location: document.getElementById('mess-location').value,
+            phone: document.getElementById('mess-phone').value,
+            menuType: document.getElementById('menu-type').value || '',
+            menuText: document.getElementById('menu-text').value,
+            price: getPriceText(document.getElementById('price').value) || '',
+            date: new Date().toISOString().split('T')[0],
+            image: imageData
+        };
+        
+        // Submit to API
         const response = await fetch(`${API_BASE_URL}/api/messes`, {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
         });
         
         if (response.ok) {
             const newMess = await response.json();
+            messData.unshift(newMess);
             
             // Show success message
             showMessage('Menu uploaded successfully!', 'success');
@@ -391,6 +376,14 @@ document.getElementById('menu-image').addEventListener('change', function(e) {
         `;
     }
 });
+
+// Auto-refresh data every 30 seconds
+setInterval(async () => {
+    await loadMessData();
+    if (document.querySelector('[data-tab="student"]').classList.contains('active')) {
+        displayMessCards(messData);
+    }
+}, 30000);
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
@@ -507,6 +500,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+        
+        .message.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
         }
         
         .message.info {
