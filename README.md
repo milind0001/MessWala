@@ -172,19 +172,23 @@ Messy/
 
 ## Deployment
 
-### Heroku Deployment
-1. Create a Heroku account
-2. Install Heroku CLI
-3. Create a new Heroku app
-4. Add MongoDB Atlas addon
-5. Set environment variables in Heroku dashboard
-6. Deploy using Git
+### Render Deployment  
+1. Create a Render account  
+2. Click New + → Web Service  
+3. Connect your GitHub repository  
+4. Set Environment to Node  
+5. Add environment variables in Settings → Environment  
+   - MONGODB_URI  
+   - PORT (optional, Render auto-assigns one)  
+   - CLOUDINARY_CLOUD_NAME  
+   - CLOUDINARY_API_KEY  
+   - CLOUDINARY_API_SECRET  
+6. Configure build and start commands  
+   - Build Command: npm install  
+   - Start Command: npm start  
+7. Click Deploy  
+8. Your app will be live at https://your-app-name.onrender.com  
 
-### Vercel Deployment
-1. Create a Vercel account
-2. Connect your GitHub repository
-3. Set environment variables in Vercel dashboard
-4. Deploy automatically
 
 ## Environment Variables
 
